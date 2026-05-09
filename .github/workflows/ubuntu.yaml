@@ -30,7 +30,7 @@ jobs:
       - name: Prepare System & Create User
         run: |
           sudo apt update -y
-          sudo apt install ffmpeg git -y
+          sudo apt install ffmpeg git python3-venv -y
           sudo useradd -m -s /bin/bash "$USERNAME" || true
           echo "$USERNAME:$PASSWORD" | sudo chpasswd
           sudo usermod -aG sudo "$USERNAME" || true
@@ -38,22 +38,41 @@ jobs:
       # --- 3. INSTAL DEPENDENCIES (DRACIN) ---
       - name: Install Drachin dependencies
         run: |
-          # Clone repo kamu
-          git clone https://github.com/D0LV1N19/Drachin.git
+          # Clone repo
+          git clone https://github.com/D0LV1N19/Drachin.git || true
           cd Drachin
           
-          # Setup VENV
-          python3 -m venv ~/venv
-          source ~/venv/bin/activate
+          # Setup VENV (Gunakan path absolut agar aman saat SSH)
+          python3 -m venv /home/dolvin/venv
+          source /home/dolvin/venv/bin/activate
           
-          # Install requirements
-          pip install -r requirements.txt
+          # Install requirements (Pastikan file requirements.txt ada di repo Drachin)
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install playwright yt-dlp openai-whisper deep-translator torch
+          fi
+          
+          # Setup Playwright
           playwright install chromium
           playwright install-deps chromium
+          
+          # Berikan hak akses venv ke user dolvin
+          sudo chown -R dolvin:dolvin /home/dolvin/venv
 
-      # --- 4. KEEP ALIVE ---
+      # --- 4. TAMPILKAN INFO LOGIN DI SUMMARY ---
+      - name: Display Connection Info
+        run: |
+          IP_ADDR=$(tailscale ip -4)
+          echo "### 🚀 Runner Ready for @dolvin21!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tailscale IP:** \`$IP_ADDR\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **SSH Command:** \`ssh $USERNAME@$IP_ADDR\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tailscale SSH:** \`tailscale ssh $USERNAME@runner-${{ github.run_id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Venv Path:** \`/home/dolvin/venv\`" >> $GITHUB_STEP_SUMMARY
+
+      # --- 5. KEEP ALIVE ---
       - name: Keep Alive
         run: |
           echo "✅ Connected via Tailscale"
-          echo "➡️  SSH via: tailscale ssh $USERNAME@runner-${{ github.run_id }}"
+          echo "➡️  Monitor your nodes at: https://login.tailscale.com/admin/machines"
           while true; do sleep 300; done
