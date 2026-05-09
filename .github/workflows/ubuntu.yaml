@@ -1,5 +1,4 @@
 name: UBUNTU SSH
-
 on:
   workflow_dispatch:
 
@@ -7,64 +6,54 @@ jobs:
   setup:
     runs-on: ubuntu-latest
     timeout-minutes: 360
-
     env:
       USERNAME: "dolvin"
       PASSWORD: "whatsapp2"
-      TALESCALE_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
-
+      TS_AUTH_KEY: ${{ secrets.TAILSCALE_AUTH_KEY }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
 
-      - name: Prepare System
-        run: |
-          sudo apt update -y
-          sudo apt upgrade -y
-          sudo apt install git
-          sudo apt update && sudo apt install ffmpeg -y
-          
-      - name: Install dependencies
-     
-        run: |
-              git clone https://github.com/D0LV1N19/Drachin.git
-              python3 -m venv ~/venv
-              source ~/venv/bin/activate
-              pip install -r requirements.txt
-              playwright install chromium
-              playwright install-deps chromium
-
-
-          
-
-          
-          
-          
-          
-
-      - name: Create User (Optional)
-        run: |
-          sudo useradd -m -s /bin/bash "$USERNAME" || true
-          echo "$USERNAME:$PASSWORD" | sudo chpasswd
-          sudo usermod -aG sudo "$USERNAME" || true
-
+      # --- 1. INSTAL TAILSCALE DULUAN ---
       - name: Install Tailscale
         run: |
           curl -fsSL https://tailscale.com/install.sh | sh
 
-      - name: Start Tailscale (Normal Kernel Mode ✅)
+      - name: Start Tailscale
         run: |
           sudo tailscaled & sleep 5
-          sudo tailscale up \
-            --authkey="${TAILESCALE_AUTH_KEY}" \
-            --hostname=runner-${{ github.run_id }} 
-            tailscale ip
-          
-          
+          sudo tailscale up --authkey="${{ env.TS_AUTH_KEY }}" --hostname=runner-${{ github.run_id }} --ssh
+          echo "IP Address Runner:"
+          tailscale ip -4
 
-      - name: Keep Alive (Prevent Runner From Ending)
+      # --- 2. PERSIAPAN SISTEM & USER ---
+      - name: Prepare System & Create User
+        run: |
+          sudo apt update -y
+          sudo apt install ffmpeg git -y
+          sudo useradd -m -s /bin/bash "$USERNAME" || true
+          echo "$USERNAME:$PASSWORD" | sudo chpasswd
+          sudo usermod -aG sudo "$USERNAME" || true
+
+      # --- 3. INSTAL DEPENDENCIES (DRACIN) ---
+      - name: Install Drachin dependencies
+        run: |
+          # Clone repo kamu
+          git clone https://github.com/D0LV1N19/Drachin.git
+          cd Drachin
+          
+          # Setup VENV
+          python3 -m venv ~/venv
+          source ~/venv/bin/activate
+          
+          # Install requirements
+          pip install -r requirements.txt
+          playwright install chromium
+          playwright install-deps chromium
+
+      # --- 4. KEEP ALIVE ---
+      - name: Keep Alive
         run: |
           echo "✅ Connected via Tailscale"
-          echo "➡️  View node in your Tailscale dashboard"
-          echo "🛑 To stop: Cancel workflow manually."
+          echo "➡️  SSH via: tailscale ssh $USERNAME@runner-${{ github.run_id }}"
           while true; do sleep 300; done
