@@ -40,25 +40,9 @@ jobs:
         run: |
           # Clone repo
           git clone https://github.com/D0LV1N19/Drachin.git || true
-          cd Drachin
+         
           
-          # Setup VENV (Gunakan path absolut agar aman saat SSH)
-          python3 -m venv /home/dolvin/venv
-          source /home/dolvin/venv/bin/activate
-          
-          # Install requirements (Pastikan file requirements.txt ada di repo Drachin)
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          else
-            pip install playwright yt-dlp openai-whisper deep-translator torch
-          fi
-          
-          # Setup Playwright
-          playwright install chromium
-          playwright install-deps chromium
-          
-          # Berikan hak akses venv ke user dolvin
-          sudo chown -R dolvin:dolvin /home/dolvin/venv
+   
 
       # --- 4. TAMPILKAN INFO LOGIN DI SUMMARY ---
       - name: Display Connection Info
